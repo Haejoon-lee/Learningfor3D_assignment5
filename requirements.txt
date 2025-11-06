@@ -5,3 +5,4 @@ PyMCubes
 tqdm
 scipy
 plotly
+tensorboard
