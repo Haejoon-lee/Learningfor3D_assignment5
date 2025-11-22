@@ -4,9 +4,18 @@ import torch
 import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 
-from models import cls_model, seg_model
+from models import cls_model_pointnet2, seg_model_pointnet2
 from data_loader import get_data_loader
-from utils import save_checkpoint, create_dir
+from utils import create_dir
+import os
+
+def save_checkpoint(epoch, model, checkpoint_dir, best=False):
+    """Save checkpoint with PointNet++ naming convention."""
+    if best:
+        path = os.path.join(checkpoint_dir, 'best_model_pointnet2.pt')
+    else:
+        path = os.path.join(checkpoint_dir, 'model_epoch_{}_pointnet2.pt'.format(epoch))
+    torch.save(model.state_dict(), path)
 
 def train(train_dataloader, model, opt, epoch, args, writer):
     
@@ -19,7 +28,7 @@ def train(train_dataloader, model, opt, epoch, args, writer):
         point_clouds = point_clouds.to(args.device)
         labels = labels.to(args.device).to(torch.long)
 
-        # ------ TO DO: Forward Pass ------
+        # Forward Pass
         predictions = model(point_clouds) 
 
         if (args.task == "seg"):
@@ -53,7 +62,6 @@ def test(test_dataloader, model, epoch, args, writer):
             point_clouds = point_clouds.to(args.device)
             labels = labels.to(args.device).to(torch.long)
 
-            # ------ TO DO: Make Predictions ------
             with torch.no_grad():
                 pred_labels = model(point_clouds).argmax(dim=1) 
             correct_obj += pred_labels.eq(labels.data).cpu().sum().item()
@@ -72,7 +80,6 @@ def test(test_dataloader, model, epoch, args, writer):
             point_clouds = point_clouds.to(args.device)
             labels = labels.to(args.device).to(torch.long)
 
-            # ------ TO DO: Make Predictions ------
             with torch.no_grad():     
                 pred_labels = model(point_clouds).argmax(dim=2)  # (B, N) - class index for each point 
 
@@ -95,21 +102,24 @@ def main(args):
     create_dir('./logs')
 
     # Tensorboard Logger
-    writer = SummaryWriter('./logs/{0}'.format(args.task+"_"+args.exp_name))
+    writer = SummaryWriter('./logs/{0}_pointnet2_{1}'.format(args.task, args.exp_name))
 
-    # ------ TO DO: Initialize Model ------
+    # Initialize Model
     if args.task == "cls":
-        model = cls_model(num_classes=3).to(args.device)
+        model = cls_model_pointnet2(num_classes=3, k=args.k).to(args.device)
     else:
-        model = seg_model(num_seg_classes=args.num_seg_class).to(args.device) 
+        model = seg_model_pointnet2(num_seg_classes=args.num_seg_class, k=args.k).to(args.device) 
     
     # Load Checkpoint 
     if args.load_checkpoint:
-        model_path = "{}/{}.pt".format(args.checkpoint_dir,args.load_checkpoint)
-        with open(model_path, 'rb') as f:
-            state_dict = torch.load(f, map_location=args.device)
-            model.load_state_dict(state_dict)
-        print ("successfully loaded checkpoint from {}".format(model_path))
+        model_path = "{}/{}.pt".format(args.checkpoint_dir, args.load_checkpoint)
+        if os.path.exists(model_path):
+            with open(model_path, 'rb') as f:
+                state_dict = torch.load(f, map_location=args.device)
+                model.load_state_dict(state_dict)
+            print("Successfully loaded checkpoint from {}".format(model_path))
+        else:
+            print("Warning: Checkpoint {} not found, starting from scratch".format(model_path))
 
     # Optimizer
     opt = optim.Adam(model.parameters(), args.lr, betas=(0.9, 0.999))
@@ -118,12 +128,18 @@ def main(args):
     train_dataloader = get_data_loader(args=args, train=True)
     test_dataloader = get_data_loader(args=args, train=False)
 
-    print ("successfully loaded data")
+    print("Successfully loaded data")
+    print("Model: PointNet++")
+    print("Task: {}".format(args.task))
+    if args.task == "cls":
+        print("K (neighbors): {}".format(args.k))
+    else:
+        print("K (neighbors): {}".format(args.k))
 
     best_acc = -1
 
-    print ("======== start training for {} task ========".format(args.task))
-    print ("(check tensorboard for plots of experiment logs/{})".format(args.task+"_"+args.exp_name))
+    print("======== start training PointNet++ for {} task ========".format(args.task))
+    print("(check tensorboard for plots of experiment logs/{}_pointnet2_{})".format(args.task, args.exp_name))
     
     for epoch in range(args.num_epochs):
 
@@ -133,20 +149,20 @@ def main(args):
         # Test
         current_acc = test(test_dataloader, model, epoch, args, writer)
 
-        print ("epoch: {}   train loss: {:.4f}   test accuracy: {:.4f}".format(epoch, train_epoch_loss, current_acc))
+        print("epoch: {}   train loss: {:.4f}   test accuracy: {:.4f}".format(epoch, train_epoch_loss, current_acc))
         
         # Save Model Checkpoint Regularly
         if epoch % args.checkpoint_every == 0:
-            print ("checkpoint saved at epoch {}".format(epoch))
-            save_checkpoint(epoch=epoch, model=model, args=args, best=False)
+            print("checkpoint saved at epoch {}".format(epoch))
+            save_checkpoint(epoch=epoch, model=model, checkpoint_dir=args.checkpoint_dir, best=False)
 
         # Save Best Model Checkpoint
         if (current_acc >= best_acc):
             best_acc = current_acc
-            print ("best model saved at epoch {}".format(epoch))
-            save_checkpoint(epoch=epoch, model=model, args=args, best=True)
+            print("best model saved at epoch {}".format(epoch))
+            save_checkpoint(epoch=epoch, model=model, checkpoint_dir=args.checkpoint_dir, best=True)
 
-    print ("======== training completes ========")
+    print("======== training completes ========")
 
 
 def create_parser():
@@ -157,6 +173,7 @@ def create_parser():
     # Model & Data hyper-parameters
     parser.add_argument('--task', type=str, default="cls", help='The task: cls or seg')
     parser.add_argument('--num_seg_class', type=int, default=6, help='The number of segmentation classes')
+    parser.add_argument('--k', type=int, default=None, help='Number of neighbors for PointNet++ (default: 32 for cls, 16 for seg)')
 
     # Training hyper-parameters
     parser.add_argument('--num_epochs', type=int, default=250)
@@ -182,5 +199,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
     args.device = torch.device("cuda" if torch.cuda.is_available() else 'cpu')
     args.checkpoint_dir = args.checkpoint_dir+"/"+args.task # checkpoint directory is task specific
+    
+    # Set default k based on task if not provided
+    if args.k is None:
+        args.k = 32 if args.task == "cls" else 16
 
     main(args)
+

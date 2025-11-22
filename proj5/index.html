@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assignment 5: PointNet for Classification and Segmentation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #3498db;
+        }
+        .course-info {
+            color: #7f8c8d;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+        .student-info {
+            color: #2c3e50;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            border-left: 4px solid #3498db;
+            padding-left: 15px;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #2c3e50;
+            margin-top: 25px;
+        }
+        .section {
+            margin: 30px 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+        .gif-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .gif-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .comparison {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .comparison-item {
+            flex: 1;
+            min-width: 300px;
+            text-align: center;
+        }
+        .comparison-item img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .two-column {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .three-column {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .code-block {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            margin: 15px 0;
+        }
+        .highlight {
+            background-color: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #ffc107;
+            margin: 15px 0;
+        }
+        .analysis-box {
+            background-color: #d1ecf1;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #17a2b8;
+            margin: 15px 0;
+        }
+        .error-box {
+            background-color: #f8d7da;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #dc3545;
+            margin: 15px 0;
+        }
+        ul, ol {
+            padding-left: 30px;
+        }
+        li {
+            margin: 8px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #3498db;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .toc {
+            background-color: #e9ecef;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .toc ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        .toc li {
+            margin: 5px 0;
+        }
+        .toc a {
+            text-decoration: none;
+            color: #2c3e50;
+        }
+        .toc a:hover {
+            color: #3498db;
+        }
+        .metric-box {
+            background-color: #d4edda;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #28a745;
+            margin: 15px 0;
+        }
+        .result-table {
+            margin: 20px 0;
+        }
+    </style>
+    <script>
+        // Force GIFs to loop continuously by reloading them
+        document.addEventListener('DOMContentLoaded', function() {
+            const gifs = document.querySelectorAll('img[src$=".gif"]');
+            gifs.forEach(function(gif) {
+                const src = gif.src;
+                setInterval(function() {
+                    gif.src = src.split('?')[0] + '?t=' + new Date().getTime();
+                }, 10000);
+            });
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="course-info">16-825 Learning for 3D Vision • Fall 2025</div>
+            <div class="student-info">Name: Haejoon Lee (andrewid: haejoonl)</div>
+        </div>
+
+        <h1>Assignment 5: PointNet for Classification and Segmentation</h1>
+
+        <div class="toc">
+            <h3>Table of Contents</h3>
+            <ul>
+                <li><a href="#q1">Q1. Classification Model (40 points)</a></li>
+                <li><a href="#q2">Q2. Segmentation Model (40 points)</a></li>
+                <li><a href="#q3">Q3. Robustness Analysis (20 points)</a>
+                    <ul style="padding-left: 20px;">
+                        <li><a href="#q3.1">Experiment 1: Rotation Robustness</a></li>
+                        <li><a href="#q3.2">Experiment 2: Number of Points</a></li>
+                    </ul>
+                </li>
+                <li><a href="#q4">Q4. Bonus Question - Locality (20 points)</a></li>
+            </ul>
+        </div>
+
+        <!-- Q1: Classification Model -->
+        <div class="section" id="q1">
+            <h2>Q1. Classification Model (40 points)</h2>
+            
+            <p>Implemented a PointNet-based classification model to classify point clouds into three categories: chairs, vases, and lamps.</p>
+
+            <h3>Model Architecture</h3>
+            <p>The classification model follows the PointNet architecture:</p>
+            <ul>
+                <li><strong>Shared MLP:</strong> Three 1D convolutional layers (3→64→128→1024) with BatchNorm and ReLU</li>
+                <li><strong>Global Feature:</strong> Max pooling over all points to extract global feature vector</li>
+                <li><strong>Classifier:</strong> Fully connected layers (1024→512→256→3) with BatchNorm, ReLU, and Dropout</li>
+            </ul>
+
+            <h3>Test Accuracy</h3>
+            <div class="metric-box">
+                <h4>Final Test Accuracy: <strong>98.22%</strong> (0.9822)</h4>
+                <p>The model achieved excellent performance on the test set, correctly classifying 98.22% of the point cloud objects.</p>
+            </div>
+        </div>
+
+        <!-- Q2: Segmentation Model -->
+        <div class="section" id="q2">
+            <h2>Q2. Segmentation Model (40 points)</h2>
+            
+            <p>Implemented a PointNet-based segmentation model to perform per-point semantic segmentation on chair point clouds with 6 semantic classes.</p>
+
+            <h3>Model Architecture</h3>
+            <p>The segmentation model uses an encoder-decoder architecture:</p>
+            <ul>
+                <li><strong>Encoder:</strong> Three 1D convolutional layers (3→64→128→1024) to extract point features</li>
+                <li><strong>Global Feature:</strong> Max pooling to get global context (1024-dim vector)</li>
+                <li><strong>Feature Concatenation:</strong> Concatenate local features (64-dim) with global feature (1024-dim) → 1088-dim</li>
+                <li><strong>Decoder:</strong> MLP layers (1088→512→256→128→6) to predict per-point class labels</li>
+            </ul>
+
+            <h3>Test Accuracy</h3>
+            <div class="metric-box">
+                <h4>Final Test Accuracy: <strong>90.45%</strong> (0.9045)</h4>
+                <p>The model correctly segments 90.45% of all points across all test objects.</p>
+            </div>
+
+            <h3>Segmentation Results</h3>
+            <p>Visualized segmentation results for 5 objects, including 2 failure cases:</p>
+
+            <div class="three-column">
+                <div class="comparison-item">
+                    <h5>Object 0</h5>
+                    <div class="two-column">
+                        <div>
+                            <img src="output/seg_eval/gt_seg_eval.gif" alt="GT Object 0">
+                            <p><em>Ground Truth</em></p>
+                        </div>
+                        <div>
+                            <img src="output/seg_eval/pred_seg_eval.gif" alt="Pred Object 0">
+                            <p><em>Prediction</em></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="comparison-item">
+                    <h5>Object 1</h5>
+                    <div class="two-column">
+                        <div>
+                            <img src="output/seg_eval/gt_seg_obj1.gif" alt="GT Object 1">
+                            <p><em>Ground Truth</em></p>
+                        </div>
+                        <div>
+                            <img src="output/seg_eval/pred_seg_obj1.gif" alt="Pred Object 1">
+                            <p><em>Prediction</em></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="comparison-item">
+                    <h5>Object 2</h5>
+                    <div class="two-column">
+                        <div>
+                            <img src="output/seg_eval/gt_seg_obj2.gif" alt="GT Object 2">
+                            <p><em>Ground Truth</em></p>
+                        </div>
+                        <div>
+                            <img src="output/seg_eval/pred_seg_obj2.gif" alt="Pred Object 2">
+                            <p><em>Prediction</em></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="comparison-item">
+                    <h5>Object 3</h5>
+                    <div class="two-column">
+                        <div>
+                            <img src="output/seg_eval/gt_seg_obj3.gif" alt="GT Object 3">
+                            <p><em>Ground Truth</em></p>
+                        </div>
+                        <div>
+                            <img src="output/seg_eval/pred_seg_obj3.gif" alt="Pred Object 3">
+                            <p><em>Prediction</em></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="comparison-item">
+                    <h5>Object 4 (Failure case on armrests)</h5>
+                    <div class="two-column">
+                        <div>
+                            <img src="output/seg_eval/gt_seg_obj4.gif" alt="GT Object 4">
+                            <p><em>Ground Truth</em></p>
+                        </div>
+                        <div>
+                            <img src="output/seg_eval/pred_seg_obj4.gif" alt="Pred Object 4">
+                            <p><em>Prediction</em></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="comparison-item">
+                    <h5>Object 5</h5>
+                    <div class="two-column">
+                        <div>
+                            <img src="output/seg_eval/gt_seg_obj5.gif" alt="GT Object 5">
+                            <p><em>Ground Truth</em></p>
+                        </div>
+                        <div>
+                            <img src="output/seg_eval/pred_seg_obj5.gif" alt="Pred Object 5">
+                            <p><em>Prediction</em></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-box">
+                <h4>Interpretation</h4>
+                <p>The PointNet segmentation model achieves good overall performance (90.45% accuracy) by combining local point features with global context. Key observations:</p>
+                <ul>
+                    <li><strong>Good Cases (Objects 0, 1, 2, 3, 5):</strong> The model correctly segments most parts of the chairs, with clear boundaries between different semantic regions (seat, backrest, legs, etc.). The global feature provides useful context for disambiguating similar local geometries.</li>
+                    <li><strong>Failure Case - Object 4:</strong> This chair exhibits a notable segmentation error where the model incorrectly predicts parts of the flat chair seat as chair arms (armrests). This failure can be attributed to two main factors:
+                        <ul>
+                            <li><strong>Dataset Bias:</strong> The training data likely contains a majority of armchairs (as seen in Objects 0-3), causing the model to develop a bias toward predicting arm structures on the sides of chairs.</li>
+                            <li><strong>Poor Local Information Extraction:</strong> PointNet's reliance on global max pooling limits its ability to capture fine-grained local geometric differences between chair seats and armrests. The slightly distinguished local geometry of these regions is not adequately captured by the model's point-wise features, leading to confusion between semantically different but geometrically similar regions.</li>
+                        </ul>
+                    </li>
+                    <li><strong>Limitations:</strong> PointNet's lack of explicit local neighborhood modeling means it may miss fine-grained details at region boundaries. The max pooling operation aggregates information globally but may not preserve important local spatial relationships needed for precise segmentation, particularly when distinguishing between parts with subtle geometric differences.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Q3: Robustness Analysis -->
+        <div class="section" id="q3">
+            <h2>Q3. Robustness Analysis (20 points)</h2>
+            
+            <p>Conducted two experiments to analyze the robustness of the learned models: rotation robustness and sensitivity to the number of input points.</p>
+
+            <div class="section" id="q3.1">
+                <h3>Experiment 1: Rotation Robustness</h3>
+                <p>Tested model performance when input point clouds are randomly rotated around all three axes (X, Y, Z) at different angles: 0°, 30°, 60°, 90°, and 180°.</p>
+
+                <h4>Classification Results</h4>
+                <table class="result-table">
+                    <thead>
+                        <tr>
+                            <th>Rotation Angle</th>
+                            <th>Accuracy</th>
+                            <th>Accuracy Drop</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>0° (baseline)</td>
+                            <td>98.22%</td>
+                            <td>0.00%</td>
+                        </tr>
+                        <tr>
+                            <td>30°</td>
+                            <td>78.28%</td>
+                            <td>-19.94%</td>
+                        </tr>
+                        <tr>
+                            <td>60°</td>
+                            <td>33.58%</td>
+                            <td>-64.64%</td>
+                        </tr>
+                        <tr>
+                            <td>90°</td>
+                            <td>29.07%</td>
+                            <td>-69.15%</td>
+                        </tr>
+                        <tr>
+                            <td>180°</td>
+                            <td>30.95%</td>
+                            <td>-67.26%</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h4>Segmentation Results</h4>
+                <table class="result-table">
+                    <thead>
+                        <tr>
+                            <th>Rotation Angle</th>
+                            <th>Accuracy</th>
+                            <th>Accuracy Drop</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>0° (baseline)</td>
+                            <td>90.45%</td>
+                            <td>0.00%</td>
+                        </tr>
+                        <tr>
+                            <td>30°</td>
+                            <td>75.10%</td>
+                            <td>-15.35%</td>
+                        </tr>
+                        <tr>
+                            <td>60°</td>
+                            <td>55.46%</td>
+                            <td>-34.99%</td>
+                        </tr>
+                        <tr>
+                            <td>90°</td>
+                            <td>36.52%</td>
+                            <td>-53.92%</td>
+                        </tr>
+                        <tr>
+                            <td>180°</td>
+                            <td>29.23%</td>
+                            <td>-61.22%</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="analysis-box">
+                    <h4>Interpretation</h4>
+                    <p><strong>Key Findings:</strong></p>
+                    <ul>
+                        <li><strong>Severe Rotation Sensitivity:</strong> Both models show significant performance degradation with rotation. Even a 30° rotation causes a ~20% drop in classification accuracy and ~15% drop in segmentation accuracy.</li>
+                        <li><strong>Root Cause:</strong> PointNet is not rotation-invariant. The model learns features in the original coordinate system, and rotations change the absolute positions of points, breaking the learned feature representations. The max pooling operation is permutation-invariant but not rotation-invariant.</li>
+                        <li><strong>Implications:</strong> This demonstrates a major limitation of vanilla PointNet - it requires data augmentation with rotations during training, or the use of rotation-invariant features, to handle rotated inputs effectively.</li>
+                    </ul>
+                </div>
+
+                <h4>Segmentation Visualization: Effect of Rotation</h4>
+                <p>Below are visualizations showing how rotation affects segmentation quality. Each pair shows ground truth (top) and prediction (bottom) at different rotation angles:</p>
+
+                <div class="three-column">
+                    <div class="comparison-item">
+                        <h5>0° (No Rotation)</h5>
+                        <img src="output/rotation_viz/gt_angle_0.gif" alt="GT 0 degrees">
+                        <p><em>Ground Truth</em></p>
+                        <img src="output/rotation_viz/pred_angle_0.gif" alt="Pred 0 degrees">
+                        <p><em>Prediction - Accuracy: 90.45%</em></p>
+                    </div>
+
+                    <div class="comparison-item">
+                        <h5>30° Rotation</h5>
+                        <img src="output/rotation_viz/gt_angle_0.gif" alt="GT 30 degrees">
+                        <p><em>Ground Truth (same object)</em></p>
+                        <img src="output/rotation_viz/pred_angle_30.gif" alt="Pred 30 degrees">
+                        <p><em>Prediction - Accuracy: 75.10%</em></p>
+                    </div>
+
+                    <div class="comparison-item">
+                        <h5>60° Rotation</h5>
+                        <img src="output/rotation_viz/gt_angle_0.gif" alt="GT 60 degrees">
+                        <p><em>Ground Truth (same object)</em></p>
+                        <img src="output/rotation_viz/pred_angle_60.gif" alt="Pred 60 degrees">
+                        <p><em>Prediction - Accuracy: 55.46%</em></p>
+                    </div>
+
+                    <div class="comparison-item">
+                        <h5>90° Rotation</h5>
+                        <img src="output/rotation_viz/gt_angle_0.gif" alt="GT 90 degrees">
+                        <p><em>Ground Truth (same object)</em></p>
+                        <img src="output/rotation_viz/pred_angle_90.gif" alt="Pred 90 degrees">
+                        <p><em>Prediction - Accuracy: 36.52%</em></p>
+                    </div>
+
+                    <div class="comparison-item">
+                        <h5>180° Rotation</h5>
+                        <img src="output/rotation_viz/gt_angle_0.gif" alt="GT 180 degrees">
+                        <p><em>Ground Truth (same object)</em></p>
+                        <img src="output/rotation_viz/pred_angle_180.gif" alt="Pred 180 degrees">
+                        <p><em>Prediction - Accuracy: 29.23%</em></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section" id="q3.2">
+                <h3>Experiment 2: Number of Points</h3>
+                <p>Tested model performance with different numbers of points per object: 10000, 5000, 2000, 1000, and 500. Points were sampled using nested subsets to ensure fair comparison.</p>
+
+                <h4>Classification Results</h4>
+                <table class="result-table">
+                    <thead>
+                        <tr>
+                            <th>Number of Points</th>
+                            <th>Accuracy</th>
+                            <th>Accuracy Drop</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>10000 (baseline)</td>
+                            <td>98.22%</td>
+                            <td>0.00%</td>
+                        </tr>
+                        <tr>
+                            <td>5000</td>
+                            <td>98.11%</td>
+                            <td>-0.10%</td>
+                        </tr>
+                        <tr>
+                            <td>2000</td>
+                            <td>97.48%</td>
+                            <td>-0.73%</td>
+                        </tr>
+                        <tr>
+                            <td>1000</td>
+                            <td>97.38%</td>
+                            <td>-0.84%</td>
+                        </tr>
+                        <tr>
+                            <td>500</td>
+                            <td>96.96%</td>
+                            <td>-1.26%</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h4>Segmentation Results</h4>
+                <table class="result-table">
+                    <thead>
+                        <tr>
+                            <th>Number of Points</th>
+                            <th>Accuracy</th>
+                            <th>Accuracy Drop</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>10000 (baseline)</td>
+                            <td>90.45%</td>
+                            <td>0.00%</td>
+                        </tr>
+                        <tr>
+                            <td>5000</td>
+                            <td>90.39%</td>
+                            <td>-0.05%</td>
+                        </tr>
+                        <tr>
+                            <td>2000</td>
+                            <td>90.22%</td>
+                            <td>-0.23%</td>
+                        </tr>
+                        <tr>
+                            <td>1000</td>
+                            <td>89.74%</td>
+                            <td>-0.71%</td>
+                        </tr>
+                        <tr>
+                            <td>500</td>
+                            <td>88.55%</td>
+                            <td>-1.89%</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="analysis-box">
+                    <h4>Interpretation</h4>
+                    <p><strong>Key Findings:</strong></p>
+                    <ul>
+                        <li><strong>Robust to Point Reduction:</strong> Both models show remarkable robustness to reducing the number of input points. Even with only 500 points (5% of original), classification maintains 96.96% accuracy and segmentation maintains 88.55% accuracy.</li>
+                        <li><strong>Why It Works:</strong> PointNet's max pooling operation is particularly effective here - it extracts the most salient features regardless of how many points contribute. As long as the key discriminative points are present, the model can make accurate predictions.</li>
+                        <li><strong>Practical Implications:</strong> This robustness is valuable for real-world applications where point cloud density may vary, or where computational efficiency requires downsampling.</li>
+                    </ul>
+                </div>
+
+                <h4>Segmentation Visualization: Effect of Number of Points</h4>
+                <p>Below are visualizations showing how segmentation quality is maintained even with significantly fewer points. Each pair shows ground truth (top) and prediction (bottom) at different point counts:</p>
+
+                <div class="three-column">
+                    <div class="comparison-item">
+                        <h5>10000 Points (Baseline)</h5>
+                        <img src="output/num_points_viz/gt_10000pts.gif" alt="GT 10000 points">
+                        <p><em>Ground Truth</em></p>
+                        <img src="output/num_points_viz/pred_10000pts.gif" alt="Pred 10000 points">
+                        <p><em>Prediction - Accuracy: 90.45%</em></p>
+                    </div>
+
+                    <div class="comparison-item">
+                        <h5>5000 Points</h5>
+                        <img src="output/num_points_viz/gt_10000pts.gif" alt="GT 5000 points">
+                        <p><em>Ground Truth (same object)</em></p>
+                        <img src="output/num_points_viz/pred_5000pts.gif" alt="Pred 5000 points">
+                        <p><em>Prediction - Accuracy: 90.39%</em></p>
+                    </div>
+
+                    <div class="comparison-item">
+                        <h5>2000 Points</h5>
+                        <img src="output/num_points_viz/gt_10000pts.gif" alt="GT 2000 points">
+                        <p><em>Ground Truth (same object)</em></p>
+                        <img src="output/num_points_viz/pred_2000pts.gif" alt="Pred 2000 points">
+                        <p><em>Prediction - Accuracy: 90.22%</em></p>
+                    </div>
+
+                    <div class="comparison-item">
+                        <h5>1000 Points</h5>
+                        <img src="output/num_points_viz/gt_10000pts.gif" alt="GT 1000 points">
+                        <p><em>Ground Truth (same object)</em></p>
+                        <img src="output/num_points_viz/pred_1000pts.gif" alt="Pred 1000 points">
+                        <p><em>Prediction - Accuracy: 89.74%</em></p>
+                    </div>
+
+                    <div class="comparison-item">
+                        <h5>500 Points</h5>
+                        <img src="output/num_points_viz/gt_10000pts.gif" alt="GT 500 points">
+                        <p><em>Ground Truth (same object)</em></p>
+                        <img src="output/num_points_viz/pred_500pts.gif" alt="Pred 500 points">
+                        <p><em>Prediction - Accuracy: 88.55%</em></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Q4: Bonus - Locality -->
+        <div class="section" id="q4">
+            <h2>Q4. Bonus Question - Locality (20 points)</h2>
+            
+            <p>Implemented simplified PointNet++.</p>
+
+            <h3>Model Implemented: PointNet++</h3>
+            <p>PointNet++ addresses PointNet's limitation of lacking local structure modeling by:</p>
+            <ul>
+                <li><strong>Hierarchical Feature Learning:</strong> Uses Set Abstraction (SA) layers that sample representative points and group local neighborhoods</li>
+                <li><strong>Local Aggregation:</strong> For each sampled point, aggregates features from k nearest neighbors using PointNet-style MLPs</li>
+                <li><strong>Multi-Scale Processing:</strong> Processes point clouds at multiple scales (e.g., 10000→512→128 points) to capture both local and global features</li>
+            </ul>
+
+            <h3>Architecture Details</h3>
+            <div class="code-block">
+Classification Model (PointNet++):
+- SA1: Samples 512 centers, groups k=32 neighbors, outputs 128-dim features
+- SA2: Samples 128 centers, groups k=32 neighbors, outputs 512-dim features
+- Global max pooling + MLP classifier (512→256→128→3)
+
+Segmentation Model (PointNet++):
+- Per-point MLP: 3→64→64
+- Local aggregation: k-NN (k=16) with relative coordinates
+- Global feature concatenation: local(128) + global(128) = 256
+- Decoder: 256→256→128→6
+            </div>
+
+            <h3>Comparison Results</h3>
+
+            <h4>Classification Task</h4>
+            <table class="result-table">
+                <thead>
+                    <tr>
+                        <th>Model</th>
+                        <th>Accuracy</th>
+                        <th>Improvement</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>PointNet</td>
+                        <td>98.22%</td>
+                        <td>-</td>
+                    </tr>
+                    <tr>
+                        <td>PointNet++</td>
+                        <td>98.64%</td>
+                        <td>+0.42% (+0.43%)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h4>Segmentation Task</h4>
+            <table class="result-table">
+                <thead>
+                    <tr>
+                        <th>Model</th>
+                        <th>Accuracy</th>
+                        <th>Improvement</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>PointNet</td>
+                        <td>90.45%</td>
+                        <td>-</td>
+                    </tr>
+                    <tr>
+                        <td>PointNet++</td>
+                        <td>88.44%</td>
+                        <td>-2.01% (-2.22%)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="analysis-box">
+                <h4>Analysis</h4>
+                <p><strong>Classification Results:</strong></p>
+                <ul>
+                    <li>PointNet++ achieves a modest improvement (+0.42%) over PointNet for classification. The hierarchical local feature learning helps capture more discriminative features, especially for objects with complex geometric structures.</li>
+                    <li>The improvement is relatively small because PointNet already performs very well (98.22%), leaving little room for improvement. However, PointNet++'s local aggregation may help with edge cases.</li>
+                </ul>
+
+                <p><strong>Segmentation Results:</strong></p>
+                <ul>
+                    <li> Our implementation of PointNet++ performs slightly worse (-2.01%) than PointNet for segmentation. This is unexpected and can be attributed to several factors:</li>
+                    <li><strong>Simplified Architecture:</strong> The implemented PointNet++ segmentation model differs significantly from the original paper (Qi et al., 2017). While the classification model follows the hierarchical Set Abstraction architecture from the paper, the segmentation model uses a simplified approach that does NOT implement the full feature propagation (FP) architecture.</li>
+                    <li><strong>Missing Components:</strong> The original PointNet++ segmentation uses an hourglass architecture: SA↓ → SA↓ → SA↓ → FP↑ → FP↑ → FP↑. Our implementation instead uses: per-point MLP → local k-NN aggregation → global feature → decoder. This means we're missing:
+                        <ul>
+                            <li>Hierarchical downsampling with Set Abstraction layers</li>
+                            <li>Feature Propagation (upsampling) layers with interpolation</li>
+                            <li>Skip connections between encoder and decoder</li>
+                            <li>Multi-scale grouping at different resolutions</li>
+                        </ul>
+                    </li>
+                    <li><strong>Why This Simplification?</strong> The full PointNet++ segmentation is complex to implement without custom CUDA kernels for ball query and efficient FPS. Our simplified version captures the "spirit" of locality through k-NN grouping but doesn't have the hierarchical structure.</li>
+                    <li><strong>Training Issues:</strong> The more complex architecture with local neighborhoods requires more careful hyperparameter tuning. The model may not have been fully optimized for this specific task.</li>
+                </ul>
+
+                <p><strong>Key Takeaway:</strong> The classification PointNet++ follows the paper's architecture closely and shows improvement, while the segmentation PointNet++ is a simplified "local-enhanced PointNet" rather than true hierarchical PointNet++, explaining its lower performance.</p>
+            </div>
+
+            <h3>Visualization Comparison: PointNet vs. PointNet++</h3>
+            <p>Below are side-by-side comparisons showing qualitative differences between PointNet and PointNet++ segmentation:</p>
+
+            <div class="section">
+                <h4>Object 1</h4>
+                <div class="comparison">
+                    <div class="comparison-item">
+                        <h5>Ground Truth</h5>
+                        <img src="output/comparison_seg/gt_obj1.gif" alt="GT Object 1">
+                        <p><em>Ground truth segmentation</em></p>
+                    </div>
+                    <div class="comparison-item">
+                        <h5>PointNet</h5>
+                        <img src="output/comparison_seg/pointnet_pred_obj1.gif" alt="PointNet Object 1">
+                        <p><em>PointNet prediction</em></p>
+                    </div>
+                    <div class="comparison-item">
+                        <h5>PointNet++</h5>
+                        <img src="output/comparison_seg/pointnet2_pred_obj1.gif" alt="PointNet++ Object 1">
+                        <p><em>PointNet++ prediction</em></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h4>Object 3</h4>
+                <div class="comparison">
+                    <div class="comparison-item">
+                        <h5>Ground Truth</h5>
+                        <img src="output/comparison_seg/gt_obj3.gif" alt="GT Object 3">
+                        <p><em>Ground truth segmentation</em></p>
+                    </div>
+                    <div class="comparison-item">
+                        <h5>PointNet</h5>
+                        <img src="output/comparison_seg/pointnet_pred_obj3.gif" alt="PointNet Object 3">
+                        <p><em>PointNet prediction</em></p>
+                    </div>
+                    <div class="comparison-item">
+                        <h5>PointNet++</h5>
+                        <img src="output/comparison_seg/pointnet2_pred_obj3.gif" alt="PointNet++ Object 3">
+                        <p><em>PointNet++ prediction</em></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h4>Object 4</h4>
+                <div class="comparison">
+                    <div class="comparison-item">
+                        <h5>Ground Truth</h5>
+                        <img src="output/comparison_seg/gt_obj4.gif" alt="GT Object 4">
+                        <p><em>Ground truth segmentation</em></p>
+                    </div>
+                    <div class="comparison-item">
+                        <h5>PointNet</h5>
+                        <img src="output/comparison_seg/pointnet_pred_obj4.gif" alt="PointNet Object 4">
+                        <p><em>PointNet prediction</em></p>
+                    </div>
+                    <div class="comparison-item">
+                        <h5>PointNet++</h5>
+                        <img src="output/comparison_seg/pointnet2_pred_obj4.gif" alt="PointNet++ Object 4">
+                        <p><em>PointNet++ prediction</em></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
+
